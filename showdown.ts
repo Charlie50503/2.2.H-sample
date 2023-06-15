@@ -1,54 +1,112 @@
-// // 玩家基類
-// abstract class ShowdownPlayer<T extends Card> {
-//   name: string;
-//   hand: T[] = [];
-//   score: number = 0;
+import { Card, Player, Game } from "./template";
 
-//   constructor(name: string) {
-//     this.name = name;
-//   }
+export enum Suit {
+  Club,
+  Diamond,
+  Heart,
+  Spade
+}
 
-//   abstract showdown(table: T[]): T | null;
-//   // 其他方法略
-// }
+export enum Rank {
+  Two = 2,
+  Three,
+  Four,
+  Five,
+  Six,
+  Seven,
+  Eight,
+  Nine,
+  Ten,
+  Jack,
+  Queen,
+  King,
+  Ace
+}
 
-// // 真實玩家
-// class HumanPlayer extends ShowdownPlayer<UNOCard> {
-//   showdown(table: UNOCard[]): UNOCard | null {
-//     // 假設輸入的指令是數字，代表手牌中的第幾張牌
-//     const input = Number(prompt('選擇一張要出的牌（輸入數字）:'));
-//     const selectedCard = this.hand[input];
+export class ShowdownCard extends Card {
+  constructor(public suit: Suit, public rank: Rank) {
+    super();
+  }
+  
+  compare(card: ShowdownCard): number {
+    if (this.rank === card.rank) {
+      return this.suit - card.suit;
+    }
+    return this.rank - card.rank;
+  }
+}
 
-//     // 檢查選擇的牌是否符合出牌規則
-//     if (selectedCard.color === table[table.length - 1].color || selectedCard.number === table[table.length - 1].number) {
-//       this.hand.splice(input, 1); // 移除手牌
-//       return selectedCard;
-//     } else {
-//       console.log('選擇的牌不符合出牌規則');
-//       return null;
-//     }
-//   }
+export class ShowdownPlayer extends Player<ShowdownCard> {
+  score:number = 0;
+  playCard(): ShowdownCard {
+    if (this.hand.length === 0) {
+      throw new Error("No more cards left in hand");
+    }
+    return this.hand.pop()!;
+  }
 
-//   // 其他方法略
-// }
+  takeTurn(): ShowdownCard {
+    return this.playCard();
+  }
+}
 
-// // AI玩家
-// class AIPlayer extends ShowdownPlayer<UNOCard> {
-//   showdown(table: UNOCard[]): UNOCard | null {
-//     for (let i = 0; i < this.hand.length; i++) {
-//       let selectedCard = this.hand[i];
+export class ShowdownGame extends Game<ShowdownCard> {
+  players: ShowdownPlayer[] = [];
+  constructor() {
+    super([
+      // Initialize deck with all cards
+    ]);
+    this.players.push(new ShowdownPlayer('Alice'));
+    this.players.push(new ShowdownPlayer('Bob'));
+    this.players.push(new ShowdownPlayer('Charlie'));
+    this.players.push(new ShowdownPlayer('Dave'));
+  }
 
-//       // 檢查選擇的牌是否符合出牌規則
-//       if (selectedCard.color === table[table.length - 1].color || selectedCard.number === table[table.length - 1].number) {
-//         this.hand.splice(i, 1); // 移除手牌
-//         return selectedCard;
-//       }
-//     }
+  startGame() {
+    for (let i = 0; i < 13; i++) {
+      this.players.forEach(player => player.draw(this.deck, this));
+    }
+    this.playGame();
+  }
 
-//     // 如果沒有符合規則的牌，則不出牌
-//     console.log(`${this.name} 沒有符合規則的牌`);
-//     return null;
-//   }
+  reshuffleDeck() {
+    this.deck.shuffle();
+  }
 
-//   // 其他方法略
-// }
+  round() {
+    let winner: ShowdownPlayer | null = null;
+    let highestCard: ShowdownCard | null = null;
+    for (const player of this.players) {
+      const card = player.playCard();
+      console.log(`${player.name} 拿出了 ${Rank[card.rank]} of ${Suit[card.suit]}`);
+      if (highestCard === null || card.compare(highestCard) > 0) {
+        winner = player;
+        highestCard = card;
+      }
+    }
+    if (winner) {
+      winner.score++;
+      console.log(`${winner.name} 贏得了這回合，目前分數為 ${winner.score}`);
+    }
+  }
+
+  checkWinner(): ShowdownPlayer | null {
+    let winner = this.players[0];
+    for (const player of this.players.slice(1)) {
+      if (player.score > winner.score) {
+        winner = player;
+      }
+    }
+    return winner;
+  }
+
+  playGame() {
+    while (this.players.some(player => player.hand.length > 0)) {
+      this.round();
+    }
+    const winner = this.checkWinner();
+    if (winner) {
+      console.log(`${winner.name} 贏得了比賽，最終分數為 ${winner.score}`);
+    }
+  }
+}
